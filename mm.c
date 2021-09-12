@@ -24,7 +24,7 @@
  ********************************************************/
 team_t team = {
     /* Team name */
-    "ateam",
+    "week06 fifth team",
     /* First member's full name */
     "Dapsu",
     /* First member's email address */
@@ -69,7 +69,7 @@ team_t team = {
 #define NEXT_BLKP(bp)   (((char *)(bp) + GET_SIZE((char *)(bp) - WSIZE)))
 #define PREV_BLKP(bp)   (((char *)(bp) - GET_SIZE((char *)(bp) - DSIZE)))
 
-static heap_listp;
+static void *heap_listp;
 
 static void *find_fit(size_t asize) {
     void *bp;
