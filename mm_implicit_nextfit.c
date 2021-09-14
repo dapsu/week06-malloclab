@@ -36,7 +36,7 @@ team_t team = {
 };
 
 // Basic constants and macors
-#define WSIZE       4           // Word and header.footer size(bytes)
+#define WSIZE       4           // Word and header/footer size(bytes)
 #define DSIZE       8           // Double word size (btyes)
 #define CHUNKSIZE   (1 << 12)   // Extend heap by this amount (bytes) : 초기 가용 블록과 힙 확장을 위한 기본 크기
 
@@ -267,7 +267,7 @@ void *mm_realloc(void *bp, size_t size)
     copySize = GET_SIZE(HDRP(old_bp)) - DSIZE;
     if (size < copySize)
       copySize = size;
-    memcpy(new_bp, old_bp, copySize);
+    memcpy(new_bp, old_bp, copySize);  // 메모리의 특정한 부분으로부터 얼마까지의 부분을 다른 메모리 영역으로 복사해주는 함수(old_bp로부터 copySize만큼의 문자를 new_bp로 복사해라)
     mm_free(old_bp);
     return new_bp;
 }

@@ -36,7 +36,7 @@ team_t team = {
 };
 
 // Basic constants and macors
-#define WSIZE       4           // Word and header.footer size(bytes)
+#define WSIZE       4           // Word and header/footer size(bytes)
 #define DSIZE       8           // Double word size (btyes)
 #define CHUNKSIZE   (1 << 12)   // Extend heap by this amount (bytes) : 초기 가용 블록과 힙 확장을 위한 기본 크기
 
@@ -64,12 +64,10 @@ team_t team = {
 
 // Declaration
 static void *heap_listp;
-static char *last_bp;
 static void *extend_heap(size_t words);
 static void *coalesce(void *bp);
-static void *next_fit(size_t a_size);
+static void *find_fit(size_t a_size);
 static void place(void *bp, size_t a_size);
-
 
 /* 
  * mm_init - initialize the malloc package.
@@ -91,7 +89,6 @@ int mm_init(void)
     if (extend_heap(CHUNKSIZE/WSIZE) == NULL) {
         return -1;
     }
-    last_bp = (char *)heap_listp;
     return 0;
 }
 
@@ -130,7 +127,6 @@ static void *coalesce(void *bp) {
 
     // case1: 앞, 뒤 블록 모두 할당되어 있을 때
     if (prev_alloc && next_alloc) {
-        last_bp = bp;
         return bp;
     }
 
@@ -156,13 +152,13 @@ static void *coalesce(void *bp) {
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
     }
-    last_bp = bp;
     return bp;
 } 
 
+
 /* 
  * mm_malloc - Allocate a block by incrementing the brk pointer.
- * Always allocate a block whose size is a multiple of the alignment.
+ *     Always allocate a block whose size is a multiple of the alignment.
  */
 void *mm_malloc(size_t size) {
     size_t a_size;       // adjusted block szie
@@ -183,9 +179,8 @@ void *mm_malloc(size_t size) {
     }
 
     // Search the free list for a fit
-    if ((bp = next_fit(a_size)) != NULL) {   // 적당한 크기의 가용 블록 검색
+    if ((bp = find_fit(a_size)) != NULL) {   // 적당한 크기의 가용 블록 검색
         place(bp, a_size);                   // 초과 부분을 분할하고 새롭게 할당한 블록의 포인터 반환
-        last_bp = bp;
         return bp;
     }
 
@@ -195,31 +190,31 @@ void *mm_malloc(size_t size) {
         return NULL;
     }
     place(bp, a_size);
-    last_bp = bp;
     return bp;
 }
 
-static void *next_fit(size_t a_size) {
-    char *bp = last_bp;
+static void *find_fit(size_t a_size) {
+    void *bp;
 
-    for (bp = NEXT_BLKP(bp); GET_SIZE(HDRP(bp)) != 0; bp = NEXT_BLKP(bp)) {
-        if (!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= a_size) {
-            last_bp = bp;
+    for (bp = (char *)heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
+        if (!GET_ALLOC(HDRP(bp)) && (a_size <= GET_SIZE(HDRP(bp)))) {
             return bp;
         }
     }
-
-    bp = heap_listp;
-    while (bp < last_bp) {
-        bp = NEXT_BLKP(bp);
-        if (!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= a_size) {
-            last_bp = bp;
-            return bp;
-        }
-    }
-
-    return NULL;
+    return NULL;    // NO fit
 }
+
+// static void *find_fit(size_t a_size) {
+//     char *bp = heap_listp;
+//     bp = NEXT_BLKP(bp);
+//     while (GET_SIZE(HDRP(bp)) < a_size || GET_ALLOC(HDRP(bp)) == 1) {   // bp가 적용될 블록의 크기보다 작고, free일 때
+//         bp = NEXT_BLKP(bp);
+//         if (GET_SIZE(HDRP(bp)) == 0) {      // Epilogue를 만났을 때
+//             return NULL;
+//         }
+//     }
+//     return bp;
+// }
 
 static void place(void *bp, size_t a_size) {
     size_t c_size = GET_SIZE(HDRP(bp));
@@ -264,10 +259,10 @@ void *mm_realloc(void *bp, size_t size)
     new_bp = mm_malloc(size);
     if (new_bp == NULL)
       return NULL;
-    copySize = GET_SIZE(HDRP(old_bp)) - DSIZE;
+    copySize = GET_SIZE(HDRP(old_bp));
     if (size < copySize)
       copySize = size;
-    memcpy(new_bp, old_bp, copySize);
+    memcpy(new_bp, old_bp, copySize);  // 메모리의 특정한 부분으로부터 얼마까지의 부분을 다른 메모리 영역으로 복사해주는 함수(old_bp로부터 copySize만큼의 문자를 new_bp로 복사해라)
     mm_free(old_bp);
     return new_bp;
 }
