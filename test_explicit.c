@@ -24,7 +24,7 @@
  ********************************************************/
 team_t team = {
     /* Team name */
-    "week06 fifth team",
+    "week06-05",
     /* First member's full name */
     "Dapsu",
     /* First member's email address */
@@ -138,61 +138,65 @@ void mm_free(void *bp) {
     coalesce(bp);
 }
 
-void *mm_realloc(void *bp, size_t size) {
-    char *old_bp = bp;
-    char *new_bp;
-    size_t copySize;
-    
-    new_bp = mm_malloc(size);
-    if (new_bp == NULL)
-      return NULL;
-    copySize = GET_SIZE(HDRP(old_bp));
-    if (size < copySize)
-      copySize = size;
-    memcpy(new_bp, old_bp, copySize);  // 메모리의 특정한 부분으로부터 얼마까지의 부분을 다른 메모리 영역으로 복사해주는 함수(old_bp로부터 copySize만큼의 문자를 new_bp로 복사해라)
-    mm_free(old_bp);
-    return new_bp;
-}
-
 // void *mm_realloc(void *bp, size_t size) {
-// 	if ((int)size < 0)
-// 		return NULL;
-// 	else if ((int)size == 0) {
-// 		mm_free(bp);
-// 		return NULL;
-// 	}
-// 	else if (size > 0) {
-// 		size_t oldsize = GET_SIZE(HDRP(bp));
-// 		size_t newsize = size + (2 * WSIZE); // 2 words for header and footer
-// 		/*if newsize가 oldsize보다 작거나 같으면 그냥 그대로 써도 됨. just return bp */
-// 		if (newsize <= oldsize) {
-// 			return bp;
-// 		}
-// 		//oldsize 보다 new size가 크면 바꿔야 함.*/
-// 		else {
-// 			size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
-// 			size_t csize;
-// 			/* next block is free and the size of the two blocks is greater than or equal the new size  */
-// 			/* next block이 가용상태이고 old, next block의 사이즈 합이 new size보다 크면 그냥 그거 바로 합쳐서 쓰기  */
-// 			if (!next_alloc && ((csize = oldsize + GET_SIZE(HDRP(NEXT_BLKP(bp))))) >= newsize) {
-// 				remove_block(NEXT_BLKP(bp));
-// 				PUT(HDRP(bp), PACK(csize, 1));
-// 				PUT(FTRP(bp), PACK(csize, 1));
-// 				return bp;
-// 			}
-// 			// 아니면 새로 block 만들어서 거기로 옮기기
-// 			else {
-// 				void *new_ptr = mm_malloc(newsize);
-// 				place(new_ptr, newsize);
-// 				memcpy(new_ptr, bp, newsize);
-// 				mm_free(bp);
-// 				return new_ptr;
-// 			}
-// 		}
-// 	}
-// 	else
-// 		return NULL;
+//     char *old_bp = bp;
+//     char *new_bp;
+//     size_t copySize;
+    
+//     new_bp = mm_malloc(size);
+//     if (new_bp == NULL)
+//       return NULL;
+//     copySize = GET_SIZE(HDRP(old_bp));
+//     if (size < copySize)
+//       copySize = size;
+//     memcpy(new_bp, old_bp, copySize);  // 메모리의 특정한 부분으로부터 얼마까지의 부분을 다른 메모리 영역으로 복사해주는 함수(old_bp로부터 copySize만큼의 문자를 new_bp로 복사해라)
+//     mm_free(old_bp);
+//     return new_bp;
 // }
+
+/*
+   기존에 malloc으로 동적 할당된 메모리 크기를 변경시켜주는 함수
+   현재 메모리에 bp가 가르키는 사이즈를 할당한 만큼 충분하지 않다면 메모리의 다른 공간의 기존 크기의 공간 할당 + 기존에 있던 데이터를 복사한 후 추가로 메모리 할당
+*/
+void *mm_realloc(void *bp, size_t size) {
+	if ((int)size < 0)
+		return NULL;
+	else if ((int)size == 0) {
+		mm_free(bp);
+		return NULL;
+	}
+	else if (size > 0) {
+		size_t old_size = GET_SIZE(HDRP(bp));
+		size_t new_size = size + (2 * WSIZE);    // 2 words for header and footer
+
+		if (new_size <= old_size) {       // new_size가 old_size보다 작거나 같으면 기존 bp 그대로 사용
+			return bp;
+		}
+
+		else { 		                    // new_size가 old_size보다 크면 사이즈 변경
+			size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
+			size_t c_size;
+
+			// next block이 가용상태이고 old, next block의 사이즈 합이 new_size보다 크면 그냥 그거 바로 합쳐서 쓰기
+			if (!next_alloc && ((c_size = old_size + GET_SIZE(HDRP(NEXT_BLKP(bp))))) >= new_size) {
+				remove_block(NEXT_BLKP(bp));
+				PUT(HDRP(bp), PACK(c_size, 1));
+				PUT(FTRP(bp), PACK(c_size, 1));
+				return bp;
+			}
+			// 아니면 새로 block 만들어서 거기로 옮기기
+			else {
+				void *new_bp = mm_malloc(new_size);
+				place(new_bp, new_size);
+				memcpy(new_bp, bp, new_size);
+				mm_free(bp);
+				return new_bp;
+			}
+		}
+	}
+	else
+		return NULL;
+}
 
 static void *extend_heap(size_t words) {
     char *bp;

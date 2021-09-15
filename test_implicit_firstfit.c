@@ -24,7 +24,7 @@
  ********************************************************/
 team_t team = {
     /* Team name */
-    "week06 fifth team",
+    "week06-05",
     /* First member's full name */
     "Dapsu",
     /* First member's email address */
